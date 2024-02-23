@@ -43,6 +43,7 @@ public class Chess {
 	enum Player { white, black }
 	private static ReturnPlay board = new ReturnPlay();
     private static Player turnPlayer = Player.white;
+	// private static boolean offeredDraw = false;
     private static ArrayList<String> moveHistory = new ArrayList<>();
 	/**
 	 * Plays the next move for whichever player has the turn.
@@ -55,61 +56,82 @@ public class Chess {
 	 */
 	public static ReturnPlay play(String move) {
 		
-		String[] inputs = sanitizeInput(move);
-    if (inputs.length < 2 || !isValidMoveFormat(inputs)) {
+	String[] inputs = sanitizeInput(move);
+
+	if(inputs[0].equals("resign")){
+		board.message = (turnPlayer==Player.white) ? Message.RESIGN_BLACK_WINS : Message.RESIGN_WHITE_WINS;
+		return board;
+	}
+
+
+	if(inputs.length >= 3 && inputs[inputs.length-1].equals("draw?")){
+		board.message = Message.DRAW;
+		return board;
+	}
+	System.out.println(inputs.length);
+	System.out.println(inputs[inputs.length-1]);
+
+	if (inputs.length < 2 || !isValidMoveFormat(inputs)) {
         board.message = Message.ILLEGAL_MOVE;
         return board;
     }
-
-    // Convert input strings to board coordinates
+	System.out.println("Turn: " + turnPlayer);
     int[] startCoords = convertToCoords(inputs[0]);
     int[] endCoords = convertToCoords(inputs[1]);
 	
 	System.out.println(Arrays.toString(startCoords));
 	System.out.println(Arrays.toString(endCoords)); // * get rid after
     if (startCoords == null || endCoords == null) {
+		System.out.println("got hit");
         board.message = Message.ILLEGAL_MOVE;
         return board;
     }
 
-    // Find the piece and validate the move
+    // If not a piece to move, not a valid move for the piece, or not ur turn
     ChessPiece piece = pieceAt(startCoords[0], startCoords[1]);
-	System.out.println(piece.pieceType);
-    if (piece == null || !piece.isValidMove(startCoords[0], startCoords[1], endCoords[0], endCoords[1])) {
-		System.out.println(piece.isValidMove(startCoords[0], startCoords[1], endCoords[0], endCoords[1]));
+    if (piece == null) {
+        System.out.println("No piece at the starting position.");
         board.message = Message.ILLEGAL_MOVE;
         return board;
     }
+    
+    // Check if it's the correct player's turn
+    if (!piece.color.equalsIgnoreCase(turnPlayer.toString())) {
+        System.out.println("It's not " + piece.color + "'s turn.");
+        board.message = Message.ILLEGAL_MOVE;
+        return board;
+    }
+
+    // Check if the move is valid for the piece
+    if (!piece.isValidMove(startCoords[0], startCoords[1], endCoords[0], endCoords[1])) {
+        System.out.println("Invalid move for " + piece.getClass().getSimpleName());
+        board.message = Message.ILLEGAL_MOVE;
+        return board;
+    }
+
+	System.out.println(piece.isValidMove(startCoords[0], startCoords[1], endCoords[0], endCoords[1]));
+	System.out.println(piece.pieceType);
 
     // Move the piece
     movePiece(startCoords[0], startCoords[1], endCoords[0], endCoords[1]);
 
     // Check for special conditions (e.g., check, checkmate) - Placeholder for implementation
-    // updateGameStatus();
 
-    togglePlayerTurn(); // Toggle the player's turn
-
-    return board; // Return the current state of the game
+    togglePlayerTurn(); 
+	board.message = null;
+    return board;
 }
-	
 	
 	/**
 	 * This method should reset the game, and start from scratch.
 	 */
 	public static void start() {
 		board.piecesOnBoard = new ArrayList<>();
-        // Initialize pieces for both white and black
-        initializePiecesForBothSides();
+        setupPieces(Player.white, 1, 2);
+		setupPieces(Player.black, 8, 7);
         board.message = null; // Reset any previous game state message
-        turnPlayer = Player.white; // White starts
-        moveHistory.clear(); // Clear move history
-}
-
-private static void initializePiecesForBothSides() {
-	// Setup pieces for White
-	setupPieces(Player.white, 1, 2);
-	// Setup pieces for Black
-	setupPieces(Player.black, 8, 7);
+        turnPlayer = Player.white; // White starts firstc1
+        moveHistory.clear();
 }
 
 private static void setupPieces(Player player, int backRow, int pawnRow) {
@@ -125,7 +147,6 @@ private static void setupPieces(Player player, int backRow, int pawnRow) {
         new Rook(PieceType.WR, PieceFile.values()[7], backRow, player.toString())
     };
 
-    // Adjust the piece types for black pieces
     if (player == Player.black) {
         for (int i = 0; i < backRowPieces.length; i++) {
             PieceType blackType = PieceType.valueOf("B" + backRowPieces[i].pieceType.name().substring(1));
@@ -145,19 +166,33 @@ private static void setupPieces(Player player, int backRow, int pawnRow) {
     }
 }
 
-
 private static String[] sanitizeInput(String move) {
 	return move.trim().toLowerCase().replaceAll("\\s+", " ").split(" ");
 }
 
+// are the move input valid?
 private static boolean isValidMoveFormat(String[] inputs) {
-	// Additional logic to validate move format goes here
+	for (String input : inputs) {
+
+        // Check if the first character is a file between 'a' and 'h'.
+        char file = input.charAt(0);
+        if (file < 'a' || file > 'h') {
+            return false;
+        }
+
+        // Check if the second character is a rank between '1' and '8'.
+        char rank = input.charAt(1);
+        if (rank < '1' || rank > '8') {
+            return false;
+        }
+    }
 	return true; // Placeholder return value
 }
 
+// Gets the piece at a location if there is one, else null
 public static ChessPiece pieceAt(int x, int y) {
 	for (ReturnPiece piece : board.piecesOnBoard) {
-		System.out.println("Checking piece: " + piece + " at [" + piece.pieceFile.ordinal() + ", " + piece.pieceRank + "]");
+		// System.out.println("Checking piece: " + piece + " at [" + piece.pieceFile.ordinal() + ", " + piece.pieceRank + "]");
 		if (piece.pieceFile.ordinal() == x && piece.pieceRank == y) {
 			return (ChessPiece) piece; // Cast as necessary; ensure your piecesOnBoard are ChessPiece instances
 		}
@@ -165,16 +200,18 @@ public static ChessPiece pieceAt(int x, int y) {
 	return null; // No piece at the given location
 }
 
+// converts chess format to coords --> a1 = [0,0]
 private static int[] convertToCoords(String position) {
     if (position.length() != 2) return null;
 
-    int x = position.charAt(0) - 'a'; // Convert 'a'-'h' to 0-7
-    int y = Character.getNumericValue(position.charAt(1)); 
+    int x = position.charAt(0) - 'a';// 1- 8
+    int y = Character.getNumericValue(position.charAt(1)) -1; 
 
     if (x < 0 || x >= 8 || y < 0 || y >= 8) return null; // Check bounds
-    return new int[]{x, y};
+    return new int[]{x, y + 1};
 }
 
+// Moves a piece from (x,y) to endx, endy (also has capturing)
 private static void movePiece(int startX, int startY, int endX, int endY) {
     // Find and remove the target piece if it exists (capture)
     ChessPiece targetPiece = pieceAt(endX, endY);
@@ -192,8 +229,6 @@ private static void movePiece(int startX, int startY, int endX, int endY) {
         board.piecesOnBoard.add(movingPiece); // Add back with new position
     }
 }
-
-
 
 private static void togglePlayerTurn() {
 	turnPlayer = (turnPlayer == Player.white) ? Player.black : Player.white;

@@ -17,11 +17,12 @@ public class Pawn extends ChessPiece {
 
         // Normal move
         if (fileDifference == 0 && rankDifference == direction) {
-            if (Chess.pieceAt(endX, endY) != null) { // Adjust this method to check if the end position is open
-                firstMove = false;
-                return true;
+            if (Chess.pieceAt(endX, endY) == null) { // The end position must be empty
+                firstMove = false; // The pawn has moved, so it's no longer its first move
+                return true; // Move is valid
             }
         }
+
 
         // First move allows two squares forward
         if (firstMove && fileDifference == 0 && rankDifference == 2 * direction) {
@@ -34,8 +35,9 @@ public class Pawn extends ChessPiece {
 
         // Capture move
         if (fileDifference == 1 && rankDifference == direction) {
-            if (Chess.pieceAt(endX, endY)!= null) { // Check if there's an enemy piece to capture
-                return true;
+            ChessPiece targetPiece = Chess.pieceAt(endX, endY);
+            if (targetPiece != null && !this.color.equals(targetPiece.color)) { // There must be an enemy piece to capture
+                return true; // Capture move is valid
             }
         }
 
