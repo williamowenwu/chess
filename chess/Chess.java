@@ -56,7 +56,7 @@ public class Chess {
 	 *         the contents of the returned ReturnPlay instance.
 	 */
 	public static ReturnPlay play(String move) {
-
+    boolean canPerformThyEnPassant = false;
 	String[] inputs = sanitizeInput(move);
 
     // Check for resignation
@@ -104,23 +104,35 @@ public class Chess {
         return board;
     }
 
-    // Check for valid move
-    if (!piece.isValidMove(startCoords[0], startCoords[1], endCoords[0], endCoords[1])) {
+    // Handle special pawn moves
+    if (piece instanceof Pawn) {
+        if (isValidEnPassant(startCoords[0], startCoords[1], endCoords[0], endCoords[1])){
+            // en Passant
+            canPerformThyEnPassant = true;
+            String lastMove = moveHistory.get(moveHistory.size() - 1);
+            String[] parts = lastMove.split("-");
+        
+            // int[] lastMoveStartCoords = convertToCoords(parts[0]);
+            int[] lastMoveEndCoords = convertToCoords(parts[1]);
+            ChessPiece youJustGotEnPassantedPawn = pieceAt(lastMoveEndCoords[0], lastMoveEndCoords[1]);
+            board.piecesOnBoard.remove(youJustGotEnPassantedPawn);
+        }
+        else if(((Pawn) piece).isPromotionMove(endCoords[1])){
+            String promotionType = inputs.length == 3 ? inputs[2].toUpperCase() : "Q"; // Default to Queen
+            promotePawn((Pawn) piece, promotionType, endCoords);
+        }
+    }
+
+    // Check for valid move with exception to en Passant
+    if (!piece.isValidMove(startCoords[0], startCoords[1], endCoords[0], endCoords[1]) && !canPerformThyEnPassant){
         board.message = Message.ILLEGAL_MOVE;
         return board;
     }
 
-    // Handle promotions
-    if (piece instanceof Pawn && ((Pawn) piece).isPromotionMove(endCoords[1])) { // only need the y
-        String promotionType = inputs.length == 3 ? inputs[2].toUpperCase() : "Q"; // Default to Queen if not specified
-        promotePawn((Pawn) piece, promotionType, endCoords);
-    } else {
-        // Perform the move for non-promotion scenarios
-        movePiece(startCoords[0], startCoords[1], endCoords[0], endCoords[1]);
-    }
+    movePiece(startCoords[0], startCoords[1], endCoords[0], endCoords[1]);
+
 	System.out.println("Turn: " + turnPlayer);
     
-	
 	System.out.println(Arrays.toString(startCoords));
 	System.out.println(Arrays.toString(endCoords)); // * get rid after
     
@@ -128,10 +140,6 @@ public class Chess {
 	System.out.println(piece.isValidMove(startCoords[0], startCoords[1], endCoords[0], endCoords[1]));
 	System.out.println(piece.pieceType);
 
-    // castle method + en passant
-    // movePiece(startCoords[0], startCoords[1], endCoords[0], endCoords[1]);
-
-    //promotion
 
     //testing purposes
     if(isInCheck(turnPlayer)){
@@ -142,6 +150,9 @@ public class Chess {
         
     togglePlayerTurn(); 
 	board.message = null;
+    String moveNotation = inputs[0] + "-" + inputs[1];
+    moveHistory.add(moveNotation);
+
     return board;
 }
 	/**
@@ -252,7 +263,6 @@ private static void movePiece(int startX, int startY, int endX, int endY) {
     }
 }
 
-
 //checks to see if after the current move, the enemy player is in check. Required method to handle checkmate.
 public static boolean isInCheck(Player playerColor) {
     King targetedKing = (King)getKing((turnPlayer == Player.white) ? Player.black : Player.white);
@@ -274,7 +284,6 @@ public static boolean isInCheck(Player playerColor) {
 
     return false;
 }
-
 
 //Checks to see if the enemy player is in checkmate. Utilizes isInCheck and a stack to track moves.
 private static boolean isInCheckMate(Player playerColor) {
@@ -371,5 +380,25 @@ private static void togglePlayerTurn() {
         board.piecesOnBoard.add(promotedPiece);
     }
 
-
+    private static boolean isValidEnPassant(int startX, int startY, int endX, int endY) {
+        if (moveHistory.isEmpty()) return false; // Cannot perform en passant without a move history
+    
+        String lastMove = moveHistory.get(moveHistory.size() - 1);
+        String[] parts = lastMove.split("-");
+        if (parts.length < 2) return false; // Invalid move format
+    
+        // Use convertToCoords to get board coordinates
+        int[] lastMoveStartCoords = convertToCoords(parts[0]);
+        int[] lastMoveEndCoords = convertToCoords(parts[1]);
+    
+        // Check if the last move was a two-square pawn advance
+        boolean isTwoSquareAdvance = Math.abs(lastMoveStartCoords[1] - lastMoveEndCoords[1]) == 2 &&
+                                      lastMoveStartCoords[0] == lastMoveEndCoords[0] &&
+                                      Math.abs(startY - endY) == 1 && // Current move is a diagonal capture
+                                      Math.abs(startX - endX) == 1 && // Must move diagonally for en passant
+                                      (endX == lastMoveEndCoords[0]); // Must be capturing towards the advanced pawn's position
+    
+        return isTwoSquareAdvance;
+    }
+    
 }
