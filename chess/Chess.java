@@ -120,11 +120,9 @@ public class Chess {
 
     //testing purposes
     if(isInCheck(turnPlayer)){
-        System.out.println(turnPlayer.name() + "Is in Check!");
-    }else if(isInCheckMate(turnPlayer)){
-        System.out.println(turnPlayer.name() + "Is in Checkmate!");
+        System.out.println(turnPlayer.name() + " Is Checking the Opponent!");
     }else{
-        System.out.println("No check or checkmate detected");
+        System.out.println(" No check or checkmate detected");
     }
         
     togglePlayerTurn(); 
@@ -251,7 +249,7 @@ public static boolean isInCheck(Player playerColor) {
         int[] tempCoords = convertToCoords(((ChessPiece)boardPiece).pieceFile.toString() + ((ChessPiece)boardPiece).pieceRank);
         int[] tempKingCoords = convertToCoords(kingPosition);
 
-        if(boardPiece.equals((turnPlayer == Player.white) ? "white" : "white")){
+        if(((ChessPiece)boardPiece).color.equals(turnPlayer.toString())){
             
             if(((ChessPiece)boardPiece).isValidMove(tempCoords[0], tempCoords[1], tempKingCoords[0], tempKingCoords[1])){
                 board.message = Message.CHECK;
