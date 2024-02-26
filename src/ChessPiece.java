@@ -2,6 +2,7 @@ package chess;
 
 public abstract class ChessPiece extends ReturnPiece {
     protected String color;
+    
 
     public ChessPiece(PieceType pieceType, PieceFile pieceFile, int pieceRank, String color) {
         this.pieceType = pieceType;

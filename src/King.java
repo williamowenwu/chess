@@ -26,7 +26,7 @@ public class King extends ChessPiece {
             return true;
         }
     }
-        //* */ Handle castling logic here (omitted for brevity)
+        //* */ Handle castling logic here
 
         return false;
     }

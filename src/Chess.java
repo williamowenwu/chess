@@ -2,6 +2,7 @@ package chess;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Stack; 
 
 import chess.ReturnPiece.PieceFile;
 import chess.ReturnPiece.PieceType;
@@ -112,11 +113,20 @@ public class Chess {
 	System.out.println(piece.isValidMove(startCoords[0], startCoords[1], endCoords[0], endCoords[1]));
 	System.out.println(piece.pieceType);
 
-    // Move the piece
+    // castle method + en passant
     movePiece(startCoords[0], startCoords[1], endCoords[0], endCoords[1]);
 
-    // Check for special conditions (e.g., check, checkmate) - Placeholder for implementation
+    //promotion
 
+    //testing purposes
+    if(isInCheck(turnPlayer)){
+        System.out.println(turnPlayer.name() + "Is in Check!");
+    }else if(isInCheckMate(turnPlayer)){
+        System.out.println(turnPlayer.name() + "Is in Checkmate!");
+    }else{
+        System.out.println("No check or checkmate detected");
+    }
+        
     togglePlayerTurn(); 
 	board.message = null;
     return board;
@@ -230,7 +240,101 @@ private static void movePiece(int startX, int startY, int endX, int endY) {
     }
 }
 
+
+//checks to see if after the current move, the enemy player is in check. Required method to handle checkmate.
+public static boolean isInCheck(Player playerColor) {
+    King targetedKing = (King)getKing((turnPlayer == Player.white) ? Player.black : Player.white);
+    String kingPosition = targetedKing.pieceFile.name() + targetedKing.pieceRank;
+    
+    //now for every friendly piece we're gonna see if they can move onto the targetedKing
+    for(ReturnPiece boardPiece: board.piecesOnBoard){
+        int[] tempCoords = convertToCoords((ChessPiece)boardPiece.pieceFile. + (ChessPiece)boardPiece.pieceRank());
+        int[] tempKingCoords = convertToCoords(kingPosition);
+
+        if(boardPiece.equals((turnPlayer == Player.white) ? "white" : "white")){
+            
+            if((isValidMove(tempCoords[0], tempCoords[1], tempKingCoords[0], tempKingCoords[1]))){
+                board.message = Message.CHECK;
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+
+
+//Checks to see if the enemy player is in checkmate. Utilizes isInCheck and a stack to track moves.
+private static boolean isInCheckMate(Player playerColor) {
+    Stack<int[]> turnLogs = new Stack<int[]>();
+
+    //establishes stack of all valid moves
+    String color = (playerColor == Player.white) ? "black" : "white";
+    if(isInCheck(playerColor)){
+        for(int i = 0; i < board.piecesOnBoard.size(); i++){
+            ReturnPiece currPiece = board.piecesOnBoard().get(i);
+            if(((Piece)currPiece).getColor().equals(color));
+            
+            int yPos = currPiece.pieceFile();
+            int xPos = currPiece.pieceRank();
+
+            for(int rank = 0; rank < 9; rank++){
+                for(int file = 0; file < 9; file++){
+                    if(((Piece)currPiece).isValidMove(xPos, yPos, rank, file) == true){
+                        int[] coords = {xPos, yPos, rank, file};
+                        turnLogs.push(coords);
+                    }
+                }
+            }
+
+            String currPiecePos = ((Piece)currPiece).pieceFile().name() + ((Piece)currPiece).pieceRank().name();
+
+            while(!turnLogs.isEmpty()){
+                int[] tempMove = turnLogs.pop();
+                ReturnPiece tempCapture = pieceAt(tempMove);
+
+                if(tempCapture != null){
+                    board.piecesOnBoard.remove(tempCapture);
+                }
+
+                ((Piece)currPiece).movePiece(tempMove[0], tempMove[1], tempMove[2], tempMove[3]);
+
+                // Check if the move resolves check
+                if (!isInCheck(playerColor)) {
+                    if (tempCapture != null) {
+                        board.piecesOnBoard.add(tempCapture);
+                    }
+                    return false;
+                }
+
+                ((Piece)currPiece).movePiece(tempMove[3], tempMove[2], tempMove[1], tempMove[0]);
+                if(tempCapture != null){
+                    board.piecesOnBoard.add(tempCapture);
+                }
+            }
+        }   
+    }
+
+    return true;
+}
+
+//Gonna use this to find the King, will be needed for Check and Checkmate. Should make the code more readable.
+private static ReturnPiece getKing(Player playerColor){
+    String color = playerColor.toString();
+
+    for(ReturnPiece boardPiece: board.piecesOnBoard){
+        //checks if color of piece matches the toString() of targeted player's color
+        if(boardPiece instanceof King && ((King)boardPiece).getColor().equals(color)){
+            return boardPiece; //King found.
+        }
+    }
+
+    return null; //no King found
+}
+
 private static void togglePlayerTurn() {
 	turnPlayer = (turnPlayer == Player.white) ? Player.black : Player.white;
 }
 }
+
