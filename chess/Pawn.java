@@ -43,4 +43,13 @@ public class Pawn extends ChessPiece {
 
         return false;
     }
+
+    public boolean isPromotionMove(int endX, int endY) {
+        // Assuming 0 is the first rank and 7 is the last rank on the board.
+        boolean isWhite = this.color.equalsIgnoreCase("white");
+        boolean isMovingToLastRank = (isWhite && endY == 7) || (!isWhite && endY == 0);
+        // Also check that the pawn is moving forward by one rank
+        boolean isMovingForwardOneRank = (isWhite && endY - this.pieceRank == 1) || (!isWhite && this.pieceRank - endY == 1);
+        return isMovingToLastRank && isMovingForwardOneRank;
+    }
 }
