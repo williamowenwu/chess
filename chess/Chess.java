@@ -56,65 +56,80 @@ public class Chess {
 	 *         the contents of the returned ReturnPlay instance.
 	 */
 	public static ReturnPlay play(String move) {
-		
+
 	String[] inputs = sanitizeInput(move);
 
-	if(inputs[0].equals("resign")){
-		board.message = (turnPlayer==Player.white) ? Message.RESIGN_BLACK_WINS : Message.RESIGN_WHITE_WINS;
-		return board;
-	}
+    // Check for resignation
+    if (inputs[0].equals("resign")) {
+        board.message = (turnPlayer == Player.white) ? Message.RESIGN_BLACK_WINS : Message.RESIGN_WHITE_WINS;
+        return board;
+    }
 
+    // Check for draw offer
+    if (inputs.length >= 3 && inputs[inputs.length - 1].equals("draw?")) {
+        board.message = Message.DRAW;
+        return board;
+    }
 
-	if(inputs.length >= 3 && inputs[inputs.length-1].equals("draw?")){
-		board.message = Message.DRAW;
-		return board;
-	}
-	System.out.println(inputs.length);
-	System.out.println(inputs[inputs.length-1]);
-
-	if (inputs.length < 2 || !isValidMoveFormat(inputs)) {
+    // Validate input format
+    if (inputs.length < 2 || !isValidMoveFormat(inputs)) {
         board.message = Message.ILLEGAL_MOVE;
         return board;
     }
-	System.out.println("Turn: " + turnPlayer);
+
     int[] startCoords = convertToCoords(inputs[0]);
     int[] endCoords = convertToCoords(inputs[1]);
-	
-	System.out.println(Arrays.toString(startCoords));
-	System.out.println(Arrays.toString(endCoords)); // * get rid after
+
+    System.out.println(Arrays.toString(startCoords));
+    System.out.println(Arrays.toString(endCoords));
+	// System.out.println(inputs.length);
+	// System.out.println(inputs[inputs.length-1]);
+
     if (startCoords == null || endCoords == null) {
 		System.out.println("got hit");
         board.message = Message.ILLEGAL_MOVE;
         return board;
     }
 
-    // If not a piece to move, not a valid move for the piece, or not ur turn
     ChessPiece piece = pieceAt(startCoords[0], startCoords[1]);
+    // If not a piece to move, not a valid move for the piece, or not ur turn
     if (piece == null) {
         System.out.println("No piece at the starting position.");
         board.message = Message.ILLEGAL_MOVE;
         return board;
     }
-    
-    // Check if it's the correct player's turn
+	// Check if it's the player's turn
     if (!piece.color.equalsIgnoreCase(turnPlayer.toString())) {
-        System.out.println("It's not " + piece.color + "'s turn.");
         board.message = Message.ILLEGAL_MOVE;
         return board;
     }
 
-    // Check if the move is valid for the piece
+    // Check for valid move
     if (!piece.isValidMove(startCoords[0], startCoords[1], endCoords[0], endCoords[1])) {
-        System.out.println("Invalid move for " + piece.getClass().getSimpleName());
         board.message = Message.ILLEGAL_MOVE;
         return board;
     }
+
+    // Handle promotions
+    if (piece instanceof Pawn && ((Pawn) piece).isPromotionMove(endCoords[1])) { // only need the y
+        String promotionType = inputs.length == 3 ? inputs[2].toUpperCase() : "Q"; // Default to Queen if not specified
+        promotePawn((Pawn) piece, promotionType, endCoords);
+    } else {
+        // Perform the move for non-promotion scenarios
+        movePiece(startCoords[0], startCoords[1], endCoords[0], endCoords[1]);
+    }
+	System.out.println("Turn: " + turnPlayer);
+    
+	
+	System.out.println(Arrays.toString(startCoords));
+	System.out.println(Arrays.toString(endCoords)); // * get rid after
+    
 
 	System.out.println(piece.isValidMove(startCoords[0], startCoords[1], endCoords[0], endCoords[1]));
 	System.out.println(piece.pieceType);
 
     // castle method + en passant
-    movePiece(startCoords[0], startCoords[1], endCoords[0], endCoords[1]);
+    // movePiece(startCoords[0], startCoords[1], endCoords[0], endCoords[1]);
 
     //promotion
 
@@ -129,7 +144,6 @@ public class Chess {
 	board.message = null;
     return board;
 }
-	
 	/**
 	 * This method should reset the game, and start from scratch.
 	 */
@@ -262,7 +276,6 @@ public static boolean isInCheck(Player playerColor) {
 }
 
 
-
 //Checks to see if the enemy player is in checkmate. Utilizes isInCheck and a stack to track moves.
 private static boolean isInCheckMate(Player playerColor) {
     Stack<int[]> turnLogs = new Stack<int[]>();
@@ -333,5 +346,30 @@ private static ReturnPiece getKing(Player playerColor){
 private static void togglePlayerTurn() {
 	turnPlayer = (turnPlayer == Player.white) ? Player.black : Player.white;
 }
-}
 
+
+    // Helper method to promote a pawn
+    private static void promotePawn(Pawn pawn, String promotionType, int[] endCoords) {
+        ChessPiece promotedPiece;
+        switch (promotionType) {
+            case "N":
+                promotedPiece = new Knight(PieceType.valueOf(pawn.color.substring(0, 1).toUpperCase() + "N"), pawn.pieceFile, endCoords[1], pawn.color);
+                break;
+            case "B":
+                promotedPiece = new Bishop(PieceType.valueOf(pawn.color.substring(0, 1).toUpperCase() + "B"), pawn.pieceFile, endCoords[1], pawn.color);
+                break;
+            case "R":
+                promotedPiece = new Rook(PieceType.valueOf(pawn.color.substring(0, 1).toUpperCase() + "R"), pawn.pieceFile, endCoords[1], pawn.color);
+                break;
+            case "Q":
+            default:
+                promotedPiece = new Queen(PieceType.valueOf(pawn.color.substring(0, 1).toUpperCase() + "Q"), pawn.pieceFile, endCoords[1], pawn.color);
+                break;
+        }
+        // Remove the pawn from the board and add the new promoted piece
+        board.piecesOnBoard.remove(pawn);
+        board.piecesOnBoard.add(promotedPiece);
+    }
+
+
+}
