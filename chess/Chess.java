@@ -248,12 +248,12 @@ public static boolean isInCheck(Player playerColor) {
     
     //now for every friendly piece we're gonna see if they can move onto the targetedKing
     for(ReturnPiece boardPiece: board.piecesOnBoard){
-        int[] tempCoords = convertToCoords((ChessPiece)boardPiece.pieceFile. + (ChessPiece)boardPiece.pieceRank());
+        int[] tempCoords = convertToCoords(((ChessPiece)boardPiece).pieceFile.toString() + ((ChessPiece)boardPiece).pieceRank);
         int[] tempKingCoords = convertToCoords(kingPosition);
 
         if(boardPiece.equals((turnPlayer == Player.white) ? "white" : "white")){
             
-            if((isValidMove(tempCoords[0], tempCoords[1], tempKingCoords[0], tempKingCoords[1]))){
+            if(((ChessPiece)boardPiece).isValidMove(tempCoords[0], tempCoords[1], tempKingCoords[0], tempKingCoords[1])){
                 board.message = Message.CHECK;
                 return true;
             }
@@ -273,32 +273,31 @@ private static boolean isInCheckMate(Player playerColor) {
     String color = (playerColor == Player.white) ? "black" : "white";
     if(isInCheck(playerColor)){
         for(int i = 0; i < board.piecesOnBoard.size(); i++){
-            ReturnPiece currPiece = board.piecesOnBoard().get(i);
-            if(((Piece)currPiece).getColor().equals(color));
+            ReturnPiece currPiece = board.piecesOnBoard.get(i);
+            if(((ChessPiece)currPiece).getColor().equals(color));
             
-            int yPos = currPiece.pieceFile();
-            int xPos = currPiece.pieceRank();
+            int[] yPosArray = convertToCoords(((ChessPiece)currPiece).pieceFile.toString() + ((ChessPiece)currPiece).pieceRank);
+            int yPos = yPosArray[0];
+            int xPos = currPiece.pieceRank;
 
-            for(int rank = 0; rank < 9; rank++){
-                for(int file = 0; file < 9; file++){
-                    if(((Piece)currPiece).isValidMove(xPos, yPos, rank, file) == true){
+            for(int rank = 1; rank < 9; rank++){
+                for(int file = 1; file < 9; file++){
+                    if(((ChessPiece)currPiece).isValidMove(xPos, yPos, rank, file) == true){
                         int[] coords = {xPos, yPos, rank, file};
                         turnLogs.push(coords);
                     }
                 }
             }
 
-            String currPiecePos = ((Piece)currPiece).pieceFile().name() + ((Piece)currPiece).pieceRank().name();
-
             while(!turnLogs.isEmpty()){
                 int[] tempMove = turnLogs.pop();
-                ReturnPiece tempCapture = pieceAt(tempMove);
+                ReturnPiece tempCapture = pieceAt(tempMove[0], tempMove[1]);
 
                 if(tempCapture != null){
                     board.piecesOnBoard.remove(tempCapture);
                 }
 
-                ((Piece)currPiece).movePiece(tempMove[0], tempMove[1], tempMove[2], tempMove[3]);
+                movePiece(tempMove[0], tempMove[1], tempMove[2], tempMove[3]);
 
                 // Check if the move resolves check
                 if (!isInCheck(playerColor)) {
@@ -308,7 +307,7 @@ private static boolean isInCheckMate(Player playerColor) {
                     return false;
                 }
 
-                ((Piece)currPiece).movePiece(tempMove[3], tempMove[2], tempMove[1], tempMove[0]);
+                movePiece(tempMove[3], tempMove[2], tempMove[1], tempMove[0]);
                 if(tempCapture != null){
                     board.piecesOnBoard.add(tempCapture);
                 }
