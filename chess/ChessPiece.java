@@ -15,5 +15,13 @@ public abstract class ChessPiece extends ReturnPiece {
         return this.color;
     }
 
+    public PieceFile getPieceFile(){
+        return this.pieceFile;
+    }
+
+    public int getPieceRank(){
+        return this.pieceRank;
+    }
+
     abstract boolean isValidMove(int startX, int startY, int endX, int endY);
 }

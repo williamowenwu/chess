@@ -57,6 +57,7 @@ public class Chess {
 	 */
 	public static ReturnPlay play(String move) {
     boolean canPerformThyEnPassant = false;
+    boolean canPerformThyCastling = false;
 	String[] inputs = sanitizeInput(move);
 
     // Check for resignation
@@ -121,10 +122,35 @@ public class Chess {
             String promotionType = inputs.length == 3 ? inputs[2].toUpperCase() : "Q"; // Default to Queen
             promotePawn((Pawn) piece, promotionType, endCoords);
         }
+        // castling
+    } else if (piece instanceof King){
+        int kingDistance = endCoords[0] - startCoords[0];
+
+        if (Math.abs(kingDistance) == 2){
+            boolean isKingside = kingDistance > 0;
+
+            int rookFile = isKingside ? 7 : 0; // 1 - 7 for a - h
+            int rookRank = piece.getColor().equals("white") ? 1 : 8;
+
+            Rook rook = (Rook) pieceAt(rookFile, rookRank);
+
+            if (rook != null && canCastle((King) piece, rook)) {
+                // Update the positions of the king and rook to their castling positions
+                // int kingEndFile = startCoords[0] + (isKingside ? 2 : -2);
+                canPerformThyCastling = true;
+                int rookEndFile = startCoords[0] + (isKingside ? 1 : -1); // Position rook next to the king
+                
+                // Move king and rook to their new positions
+                // movePiece(startCoords[0], startCoords[1], kingEndFile, startCoords[1]); // Move king
+                movePiece(rookFile, rookRank, rookEndFile, rookRank); // Move rook
+            }
+
+        }
+        // if (canCastle())
     }
 
-    // Check for valid move with exception to en Passant
-    if (!piece.isValidMove(startCoords[0], startCoords[1], endCoords[0], endCoords[1]) && !canPerformThyEnPassant){
+    // Check for valid move with exception to en Passant and castling
+    if (!piece.isValidMove(startCoords[0], startCoords[1], endCoords[0], endCoords[1]) && !canPerformThyEnPassant && !canPerformThyCastling){
         board.message = Message.ILLEGAL_MOVE;
         return board;
     }
@@ -267,7 +293,7 @@ private static void movePiece(int startX, int startY, int endX, int endY) {
 public static boolean isInCheck(ReturnPlay board, Player playerColor) {
     King targetedKing = (King)getKing((turnPlayer == Player.white) ? Player.black : Player.white);
     String kingPosition = targetedKing.pieceFile.name() + targetedKing.pieceRank;
-    
+
     //now for every friendly piece we're gonna see if they can move onto the targetedKing
     for(ReturnPiece boardPiece: board.piecesOnBoard){
         int[] tempCoords = convertToCoords(((ChessPiece)boardPiece).pieceFile.toString() + ((ChessPiece)boardPiece).pieceRank);
@@ -289,7 +315,6 @@ public static boolean isInCheck(ReturnPlay board, Player playerColor) {
 private static boolean isInCheckMate(Player playerColor) {
     Stack<int[]> turnLogs = new Stack<int[]>();
 
-    //establishes stack of all valid moves
     String color = (playerColor == Player.white) ? "black" : "white";
 
     //all checkmates are also checks 
@@ -325,9 +350,8 @@ private static boolean isInCheckMate(Player playerColor) {
                     return true;
                 }
             }
-        }   
+        }
     }
-
     return false;
 }
 
@@ -366,7 +390,6 @@ private static ReturnPiece getKing(Player playerColor){
 private static void togglePlayerTurn() {
 	turnPlayer = (turnPlayer == Player.white) ? Player.black : Player.white;
 }
-
 
     // Helper method to promote a pawn
     private static void promotePawn(Pawn pawn, String promotionType, int[] endCoords) {
@@ -408,8 +431,66 @@ private static void togglePlayerTurn() {
                                       Math.abs(startY - endY) == 1 && // Current move is a diagonal capture
                                       Math.abs(startX - endX) == 1 && // Must move diagonally for en passant
                                       (endX == lastMoveEndCoords[0]); // Must be capturing towards the advanced pawn's position
-    
+
         return isTwoSquareAdvance;
     }
+
+    private static boolean canCastle(King king, Rook rook) {
+        // Check if both the king and rook have not moved
+        if (!king.hasFirstMove() || !rook.hasFirstMove()) {
+            return false;
+        }
+
+        // Check if the path between the king and rook is clear
+        int startFile = Math.min(king.getPieceFile().ordinal(), rook.getPieceFile().ordinal());
+        int endFile = Math.max(king.getPieceFile().ordinal(), rook.getPieceFile().ordinal());
+        for (int file = startFile + 1; file < endFile; file++) {
+            if (Chess.pieceAt(file, king.getPieceRank()) != null) {
+                return false; // Path is not clear
+            }
+        }
+        Player p = king.getColor().equals("white") ? Player.white : Player.black;
+        // Check if the king is in check
+        if (isInCheck(board, p)) {
+            return false;
+        }
+        
+        // Ensure the squares the king passes through are not under attack
+        int kingStartFile = king.getPieceFile().ordinal();
+        int kingEndFile = kingStartFile + (rook.getPieceFile().ordinal() > kingStartFile ? 2 : -2);
+        for (int file = kingStartFile; file != kingEndFile; file += Integer.signum(kingEndFile - kingStartFile)) {
+            if (isSquareUnderAttack(file, king.getPieceRank(), king.getColor())) {
+                return false;
+            }
+        }
+        
+        return true; // All conditions met for castling
+    }
+
+    private static boolean isSquareUnderAttack(int file, int rank, String attackerColor) {
+        // Loop through all pieces on the board
+        for (ReturnPiece piece : board.piecesOnBoard) {
+            // First, check if the piece can be downcasted to ChessPiece
+            if (piece instanceof ChessPiece) {
+                ChessPiece chessPiece = (ChessPiece) piece; // Safe downcast
+
+                // Check if the piece is of the attacking color
+                if (chessPiece.getColor().equals(attackerColor)) {
+                    // Determine if the piece can legally move to the target square
+                    if (chessPiece.isValidMove(chessPiece.getPieceFile().ordinal(), chessPiece.getPieceRank(), file, rank)) {
+                        // If so, and if it's a Knight or Pawn, return true
+                        if (chessPiece instanceof Knight || chessPiece instanceof Pawn) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+        
+    }
+    
+    
+    
     
 }
