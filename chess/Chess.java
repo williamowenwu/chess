@@ -303,8 +303,8 @@ private static boolean isInCheckMate(Player playerColor) {
             int xPos = currPiece.pieceRank;
 
             //finds all legal moves possible
-            for(int rank = 1; rank < 9; rank++){
-                for(int file = 1; file < 9; file++){
+            for(int rank = 0; rank < 8; rank++){
+                for(int file = 0; file < 8; file++){
                     if(((ChessPiece)currPiece).isValidMove(xPos, yPos, rank, file) == true){
                         int[] coords = {xPos, yPos, rank, file};
                         turnLogs.push(coords);
@@ -316,12 +316,12 @@ private static boolean isInCheckMate(Player playerColor) {
                 int[] tempMove = turnLogs.pop();
 
                 ReturnPlay tempBoard = new ReturnPlay();
-                tempBoard = board;
+                tempBoard.piecesOnBoard = board.piecesOnBoard;
 
                 moveTempPiece(tempBoard, tempMove[0], tempMove[1], tempMove[2], tempMove[3]);
 
                 // Check if the move resolves check
-                if (!isInCheck(tempBoard, playerColor)){ 
+                if (isInCheck(tempBoard, playerColor)){ 
                     return true;
                 }
             }
@@ -336,20 +336,16 @@ private static void moveTempPiece(ReturnPlay tempBoard, int startX, int startY, 
     ChessPiece targetPiece = pieceAt(endX, endY);
 	System.out.println("target piece" + targetPiece);
     if (targetPiece != null) {
-        board.piecesOnBoard.remove(targetPiece);
+        tempBoard.piecesOnBoard.remove(targetPiece);
     }
 
     // Find the moving piece and update its position
     ChessPiece movingPiece = pieceAt(startX, startY);
     if (movingPiece != null) {
-        // Check if endX is a valid index for PieceFile.values()
-        if (endX >= 0 && endX < PieceFile.values().length) {
-            movingPiece.pieceFile = PieceFile.values()[endX]; // Update file
-            movingPiece.pieceRank = endY; // Update rank (convert back to 1-8 scale)
-            board.piecesOnBoard.add(movingPiece); // Add back with new position
-        } else {
-            System.out.println("Invalid endX value: " + endX);
-        }
+        tempBoard.piecesOnBoard.remove(movingPiece); // Remove from old position
+        movingPiece.pieceFile = PieceFile.values()[endX]; // Update file
+        movingPiece.pieceRank = endY; // Update rank (convert back to 1-8 scale)
+        tempBoard.piecesOnBoard.add(movingPiece); // Add back with new position
     }
 }
 

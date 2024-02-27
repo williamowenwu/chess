@@ -1,0 +1,9 @@
+e2 e4
+e7 e5
+f1 c4
+b8 c6
+d1 h5
+g8 f6
+h5 f7
+
+//pass: white successfully checkmates black on move 7 by wQ from h5 to f7
