@@ -142,8 +142,8 @@ public class Chess {
 
 
     //testing purposes
-    if(isInCheck(turnPlayer)){
-        System.out.println(turnPlayer.name() + " Is Checking the Opponent!");
+    if(isInCheckMate(turnPlayer)){
+        System.out.println(turnPlayer.name() + " Is Checkmating the Opponent!");
     }else{
         System.out.println(" No check or checkmate detected");
     }
@@ -264,7 +264,7 @@ private static void movePiece(int startX, int startY, int endX, int endY) {
 }
 
 //checks to see if after the current move, the enemy player is in check. Required method to handle checkmate.
-public static boolean isInCheck(Player playerColor) {
+public static boolean isInCheck(ReturnPlay board, Player playerColor) {
     King targetedKing = (King)getKing((turnPlayer == Player.white) ? Player.black : Player.white);
     String kingPosition = targetedKing.pieceFile.name() + targetedKing.pieceRank;
     
@@ -291,7 +291,9 @@ private static boolean isInCheckMate(Player playerColor) {
 
     //establishes stack of all valid moves
     String color = (playerColor == Player.white) ? "black" : "white";
-    if(isInCheck(playerColor)){
+
+    //all checkmates are also checks 
+    if(isInCheck(board, playerColor)){ 
         for(int i = 0; i < board.piecesOnBoard.size(); i++){
             ReturnPiece currPiece = board.piecesOnBoard.get(i);
             if(((ChessPiece)currPiece).getColor().equals(color));
@@ -300,6 +302,7 @@ private static boolean isInCheckMate(Player playerColor) {
             int yPos = yPosArray[0];
             int xPos = currPiece.pieceRank;
 
+            //finds all legal moves possible
             for(int rank = 1; rank < 9; rank++){
                 for(int file = 1; file < 9; file++){
                     if(((ChessPiece)currPiece).isValidMove(xPos, yPos, rank, file) == true){
@@ -311,31 +314,43 @@ private static boolean isInCheckMate(Player playerColor) {
 
             while(!turnLogs.isEmpty()){
                 int[] tempMove = turnLogs.pop();
-                ReturnPiece tempCapture = pieceAt(tempMove[0], tempMove[1]);
 
-                if(tempCapture != null){
-                    board.piecesOnBoard.remove(tempCapture);
-                }
+                ReturnPlay tempBoard = new ReturnPlay();
+                tempBoard = board;
 
-                movePiece(tempMove[0], tempMove[1], tempMove[2], tempMove[3]);
+                moveTempPiece(tempBoard, tempMove[0], tempMove[1], tempMove[2], tempMove[3]);
 
                 // Check if the move resolves check
-                if (!isInCheck(playerColor)) {
-                    if (tempCapture != null) {
-                        board.piecesOnBoard.add(tempCapture);
-                    }
-                    return false;
-                }
-
-                movePiece(tempMove[3], tempMove[2], tempMove[1], tempMove[0]);
-                if(tempCapture != null){
-                    board.piecesOnBoard.add(tempCapture);
+                if (!isInCheck(tempBoard, playerColor)){ 
+                    return true;
                 }
             }
         }   
     }
 
-    return true;
+    return false;
+}
+
+private static void moveTempPiece(ReturnPlay tempBoard, int startX, int startY, int endX, int endY) {
+    // Find and remove the target piece if it exists (capture)
+    ChessPiece targetPiece = pieceAt(endX, endY);
+	System.out.println("target piece" + targetPiece);
+    if (targetPiece != null) {
+        board.piecesOnBoard.remove(targetPiece);
+    }
+
+    // Find the moving piece and update its position
+    ChessPiece movingPiece = pieceAt(startX, startY);
+    if (movingPiece != null) {
+        // Check if endX is a valid index for PieceFile.values()
+        if (endX >= 0 && endX < PieceFile.values().length) {
+            movingPiece.pieceFile = PieceFile.values()[endX]; // Update file
+            movingPiece.pieceRank = endY; // Update rank (convert back to 1-8 scale)
+            board.piecesOnBoard.add(movingPiece); // Add back with new position
+        } else {
+            System.out.println("Invalid endX value: " + endX);
+        }
+    }
 }
 
 //Gonna use this to find the King, will be needed for Check and Checkmate. Should make the code more readable.
